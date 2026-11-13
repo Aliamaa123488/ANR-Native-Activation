@@ -37,3 +37,5 @@ The installer is written under `src-tauri\target\release\bundle\nsis`.
 The release package README/install scripts are treated as upstream technical references. This app does not execute downloaded `.cmd` or `.ps1` files; it verifies the GitHub-published digest when available, extracts only the expected package directory, checks that the game is closed, backs up replaced files, and applies the required OptiScaler settings itself.
 
 ANR FG is beta software. Supported GPUs are NVIDIA GeForce RTX 20 and newer / GTX 16, AMD Radeon RX 5000 and newer, and Intel Arc A/B, according to the upstream release notes.
+
+**By Ali Soleymani and Codex**
