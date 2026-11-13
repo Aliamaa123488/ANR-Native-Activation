@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ANR Native Activation",
+  "version": "0.1.1",
+  "identifier": "com.apexcompute.anr-native-activation",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "ANR Native Activation",
+        "width": 880,
+        "height": 700,
+        "minWidth": 700,
+        "minHeight": 620,
+        "center": true,
+        "resizable": true,
+        "backgroundColor": "#0c1017"
+      }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/icon.ico"],
+    "category": "Game",
+    "shortDescription": "Install and launch ANR FG",
+    "longDescription": "A lightweight Windows installer and launcher for Apex Neural Rendering FG."
+  }
+}
