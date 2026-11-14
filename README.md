@@ -11,6 +11,9 @@ A small Windows Tauri app for installing, updating, and launching Apex Neural Re
 - Detects game executables and display adapters through Windows. The adapter menu lists integrated and discrete GPUs. Windows exposes power-saving and high-performance routing preferences per game, so selecting a listed adapter applies the matching preference category.
 - Reads dedicated VRAM through DXGI instead of WMI's 32-bit `AdapterRAM` field; integrated adapters are labeled as shared memory.
 - Launches the selected game executable from its game folder. ANR FG still needs Frame Generation enabled in the game's graphics menu.
+- Adds a Monitoring tab with FPS, rolling 1% and 0.1% lows, game GPU busy time, and overall CPU load. It uses display-to-display frame timing when the game reports it, and otherwise falls back to app presents. Each reading can be hidden from the in-game overlay, and the overlay's green/amber/red colors give a quick load and FPS guide.
+- Downloads the standalone x64 [PresentMon](https://github.com/GameTechDev/PresentMon) capture tool from its official GitHub releases when monitoring is first used, checks GitHub's SHA-256 digest when provided, then caches it at `Documents\ANR Native Act\tools\PresentMon.exe`. It is not bundled into the installer. If Windows blocks ETW capture, add the Windows account to Performance Log Users or run the app as administrator.
+- Displays a compact, always-on-top, click-through overlay over borderless or windowed games. Exclusive fullscreen modes can cover desktop overlays. The 0.1% low is shown after at least 1,000 frames; both low figures use the last 60 seconds of frames.
 - Checks for the Microsoft Visual C++ x64 runtime needed by the full package and opens Microsoft's download if it is missing.
 
 The app installs the release package into the game directory; it does not clone ANR's source repository. This matches the upstream release instructions, which distribute ready-to-install ZIP assets.

@@ -1,3 +1,4 @@
+use crate::monitoring::{self, GameLaunchResult, MonitorState};
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -697,7 +698,12 @@ fn install_addon_package(
 }
 
 #[tauri::command]
-pub fn launch_game(game_dir: String, executable: String, gpu: String) -> Result<String, String> {
+pub fn launch_game(
+    state: tauri::State<'_, MonitorState>,
+    game_dir: String,
+    executable: String,
+    gpu: String,
+) -> Result<GameLaunchResult, String> {
     let root = validate_game_dir(&game_dir)?;
     if executable.is_empty()
         || Path::new(&executable).components().count() != 1
@@ -710,13 +716,17 @@ pub fn launch_game(game_dir: String, executable: String, gpu: String) -> Result<
         return Err("The selected game executable is no longer in this folder.".into());
     }
     set_windows_gpu_preference(&exe_path, &gpu)?;
-    Command::new(&exe_path)
+    let child = Command::new(&exe_path)
         .current_dir(&root)
         .spawn()
         .map_err(|error| format!("Could not launch the game: {error}"))?;
-    Ok(format!(
-        "Launched {executable}. ANR will load when the game starts."
-    ))
+    let process_id = child.id();
+    monitoring::record_game_launch(&state, process_id, &executable);
+    Ok(GameLaunchResult {
+        message: format!("Launched {executable}. ANR will load when the game starts."),
+        process_id,
+        executable,
+    })
 }
 
 fn set_windows_gpu_preference(exe: &Path, gpu: &str) -> Result<(), String> {

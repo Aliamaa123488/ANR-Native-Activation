@@ -29,6 +29,62 @@ const state = {
 
 document.documentElement.dataset.theme = state.theme;
 
+const monitorPreferenceDefaults = {
+  fps: true,
+  onePercentLow: true,
+  pointOnePercentLow: true,
+  gpuUsage: true,
+  cpuUsage: true,
+  overlayAfterLaunch: false,
+};
+try {
+  state.monitorPreferences = {
+    ...monitorPreferenceDefaults,
+    ...JSON.parse(localStorage.getItem('monitor-preferences') || '{}'),
+  };
+} catch {
+  state.monitorPreferences = { ...monitorPreferenceDefaults };
+}
+
+const isOverlay = new URLSearchParams(window.location.search).has('overlay');
+if (isOverlay) {
+  document.documentElement.classList.add('overlay-window');
+  document.querySelector('#app').innerHTML = `
+    <section class="overlay-panel" aria-live="polite">
+      <div class="overlay-heading"><span class="overlay-indicator"></span><strong id="overlay-game">ANR MONITOR</strong><span class="overlay-live">LIVE</span></div>
+      <div class="overlay-metrics" id="overlay-metrics"></div>
+    </section>
+  `;
+  const renderOverlay = async () => {
+    try {
+      const snapshot = await invoke('get_monitor_snapshot');
+      const { preferences: prefs } = snapshot;
+      const readings = [
+        ['fps', 'FPS', snapshot.fps, 'fps'],
+        ['onePercentLow', '1% LOW', snapshot.onePercentLow, 'fps'],
+        ['pointOnePercentLow', '0.1% LOW', snapshot.pointOnePercentLow, 'fps'],
+        ['gpuUsage', 'GPU', snapshot.gpuUsage, 'percent'],
+        ['cpuUsage', 'CPU', snapshot.cpuUsage, 'percent'],
+      ].filter(([key]) => prefs[key]);
+      $('#overlay-game').textContent = snapshot.gameRunning ? snapshot.gameName : 'ANR MONITOR';
+      $('#overlay-metrics').innerHTML = readings.map(([key, label, value, kind]) => {
+        const warming = value == null;
+        const numericValue = value == null ? null : Math.round(value);
+        const colorClass = kind === 'percent'
+          ? numericValue >= 85 ? 'hot' : numericValue >= 60 ? 'warm' : 'cool'
+          : numericValue >= 60 ? 'cool' : numericValue >= 30 ? 'warm' : 'hot';
+        const shown = warming ? (snapshot.gameRunning ? '…' : '—') : `${numericValue}${kind === 'percent' ? '%' : ''}`;
+        return `<div class="overlay-reading"><span>${label}</span><strong class="${warming ? '' : colorClass}">${shown}</strong></div>`;
+      }).join('') || '<div class="overlay-empty">Choose metrics in ANR Monitoring</div>';
+    } catch {
+      $('#overlay-game').textContent = 'ANR MONITOR';
+    }
+  };
+  const $ = (selector) => document.querySelector(selector);
+  renderOverlay();
+  window.setInterval(renderOverlay, 700);
+} else {
+
 document.querySelector('#app').innerHTML = `
   <div class="shell">
     <header class="topbar">
@@ -42,7 +98,12 @@ document.querySelector('#app').innerHTML = `
       </div>
     </header>
 
-    <main>
+    <nav class="view-tabs" aria-label="App sections" role="tablist">
+      <button class="view-tab is-active" id="setup-tab" role="tab" aria-selected="true" aria-controls="launcher-view">Game setup</button>
+      <button class="view-tab" id="monitor-tab" role="tab" aria-selected="false" aria-controls="monitor-view">Monitoring</button>
+    </nav>
+
+    <main id="launcher-view">
       <section class="hero">
         <div class="hero-copy">
           <div class="eyebrow"><span class="eyebrow-line"></span> APEX NEURAL RENDERING</div>
@@ -100,6 +161,31 @@ document.querySelector('#app').innerHTML = `
       <div class="status-message" id="status-message" role="status" aria-live="polite"></div>
       <footer><span>ANR FG is beta software from Apex Compute.</span><span>Files cached in <b>Documents / ANR Native Act</b></span></footer>
     </main>
+
+    <main id="monitor-view" hidden>
+      <div class="monitor-page-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> LIVE PERFORMANCE</div><h2>Monitoring</h2><p>Choose what you want to see. Start the game from Setup to collect live readings.</p></div><span class="monitor-state" id="monitor-state">NOT RUNNING</span></div>
+      <section class="monitor-summary" aria-label="Live readings">
+        <article class="monitor-stat"><span>FPS</span><strong id="fps-value">—</strong></article>
+        <article class="monitor-stat"><span>1% LOW</span><strong id="one-low-value">—</strong></article>
+        <article class="monitor-stat"><span>0.1% LOW</span><strong id="point-one-low-value">—</strong></article>
+        <article class="monitor-stat usage-stat"><span>GPU USAGE</span><strong id="gpu-value">—</strong><i id="gpu-bar"></i></article>
+        <article class="monitor-stat usage-stat"><span>CPU USAGE</span><strong id="cpu-value">—</strong><i id="cpu-bar"></i></article>
+      </section>
+      <section class="monitor-settings">
+        <div class="monitor-section-title"><div><strong>Overlay metrics</strong><span>Pick the readings that appear over your game</span></div><span>Click-through · always on top</span></div>
+        <div class="metric-options">
+          <label class="metric-option"><input type="checkbox" data-metric="fps"><span class="metric-check"></span><span><b>FPS</b><small>Frames per second</small></span></label>
+          <label class="metric-option"><input type="checkbox" data-metric="onePercentLow"><span class="metric-check"></span><span><b>1% low</b><small>Slowest one percent</small></span></label>
+          <label class="metric-option"><input type="checkbox" data-metric="pointOnePercentLow"><span class="metric-check"></span><span><b>0.1% low</b><small>Slowest tenth of a percent</small></span></label>
+          <label class="metric-option"><input type="checkbox" data-metric="gpuUsage"><span class="metric-check"></span><span><b>GPU usage</b><small>Game GPU busy time</small></span></label>
+          <label class="metric-option"><input type="checkbox" data-metric="cpuUsage"><span class="metric-check"></span><span><b>CPU usage</b><small>Overall processor load</small></span></label>
+          <label class="metric-option overlay-auto-option"><input type="checkbox" data-metric="overlayAfterLaunch"><span class="metric-check"></span><span><b>Open overlay on launch</b><small>Show it automatically in game</small></span></label>
+        </div>
+        <div class="monitor-actions"><button class="overlay-toggle" id="overlay-toggle" disabled>Show in-game overlay</button><button class="monitor-stop" id="monitor-stop" disabled>Stop monitoring</button><span id="monitor-message">Launch a game from Setup to start monitoring.</span></div>
+        <div class="monitor-legend"><span><i class="legend-dot good"></i>Low</span><span><i class="legend-dot medium"></i>Moderate</span><span><i class="legend-dot high"></i>High</span><small>CPU and GPU load colors update as you play.</small></div>
+      </section>
+      <div class="monitor-footnote">Frame timing comes from PresentMon. The first 0.1% low appears after about 1,000 frames; both lows use a rolling 60-second window.</div>
+    </main>
   </div>
 `;
 
@@ -111,6 +197,56 @@ const installButton = $('#install');
 const launchButton = $('#launch');
 const uninstallButton = $('#uninstall');
 const statusMessage = $('#status-message');
+
+function setView(view) {
+  const monitoring = view === 'monitor';
+  $('#launcher-view').hidden = monitoring;
+  $('#monitor-view').hidden = !monitoring;
+  $('#setup-tab').classList.toggle('is-active', !monitoring);
+  $('#monitor-tab').classList.toggle('is-active', monitoring);
+  $('#setup-tab').setAttribute('aria-selected', String(!monitoring));
+  $('#monitor-tab').setAttribute('aria-selected', String(monitoring));
+}
+
+function renderMonitor(snapshot) {
+  state.monitorSnapshot = snapshot;
+  state.overlayVisible = snapshot.overlayVisible;
+  const reading = (value, { percent = false, decimals = 0 } = {}) => value == null ? '—' : `${value.toFixed(decimals)}${percent ? '%' : ''}`;
+  $('#fps-value').textContent = reading(snapshot.fps, { decimals: 0 });
+  $('#one-low-value').textContent = reading(snapshot.onePercentLow, { decimals: 0 });
+  $('#point-one-low-value').textContent = reading(snapshot.pointOnePercentLow, { decimals: 0 });
+  $('#gpu-value').textContent = reading(snapshot.gpuUsage, { percent: true });
+  $('#cpu-value').textContent = reading(snapshot.cpuUsage, { percent: true });
+  for (const key of ['gpuUsage', 'cpuUsage']) {
+    const value = snapshot[key];
+    const element = $(`#${key === 'gpuUsage' ? 'gpu' : 'cpu'}-value`);
+    const bar = $(`#${key === 'gpuUsage' ? 'gpu' : 'cpu'}-bar`);
+    const level = value == null ? 'neutral' : value >= 85 ? 'high' : value >= 60 ? 'medium' : 'good';
+    element.dataset.level = level;
+    bar.dataset.level = level;
+    bar.style.width = `${value == null ? 0 : Math.max(0, Math.min(100, value))}%`;
+  }
+  const running = snapshot.gameRunning;
+  $('#monitor-state').textContent = running ? 'LIVE' : 'NOT RUNNING';
+  $('#monitor-state').classList.toggle('is-live', running);
+  $('#monitor-message').textContent = snapshot.message || (running ? 'Collecting game performance…' : 'Launch a game from Setup to start monitoring.');
+  $('#overlay-toggle').disabled = !running;
+  $('#overlay-toggle').textContent = state.overlayVisible ? 'Hide in-game overlay' : 'Show in-game overlay';
+  $('#monitor-stop').disabled = !running;
+}
+
+async function refreshMonitor() {
+  try {
+    renderMonitor(await invoke('get_monitor_snapshot'));
+  } catch (error) {
+    $('#monitor-message').textContent = String(error);
+  }
+}
+
+function saveMonitorPreferences() {
+  localStorage.setItem('monitor-preferences', JSON.stringify(state.monitorPreferences));
+  invoke('set_monitor_preferences', { preferences: state.monitorPreferences }).catch(() => {});
+}
 
 function setTheme(theme) {
   state.theme = theme;
@@ -256,6 +392,36 @@ async function inspectFolder(folder) {
 }
 
 $('#theme-toggle').addEventListener('click', () => setTheme(state.theme === 'dark' ? 'light' : 'dark'));
+$('#setup-tab').addEventListener('click', () => setView('setup'));
+$('#monitor-tab').addEventListener('click', () => setView('monitor'));
+document.querySelectorAll('[data-metric]').forEach((checkbox) => {
+  const key = checkbox.dataset.metric;
+  checkbox.checked = state.monitorPreferences[key];
+  checkbox.addEventListener('change', () => {
+    state.monitorPreferences[key] = checkbox.checked;
+    saveMonitorPreferences();
+  });
+});
+$('#overlay-toggle').addEventListener('click', async () => {
+  try {
+    state.overlayVisible = !state.overlayVisible;
+    await invoke('set_overlay_visible', { visible: state.overlayVisible });
+    refreshMonitor();
+  } catch (error) {
+    state.overlayVisible = false;
+    $('#monitor-message').textContent = String(error);
+  }
+});
+$('#monitor-stop').addEventListener('click', async () => {
+  try {
+    await invoke('stop_monitoring');
+    if (state.overlayVisible) await invoke('set_overlay_visible', { visible: false });
+    state.overlayVisible = false;
+    await refreshMonitor();
+  } catch (error) {
+    $('#monitor-message').textContent = String(error);
+  }
+});
 $('#browse').addEventListener('click', async () => {
   try {
     const folder = await invoke('choose_game_folder');
@@ -300,7 +466,18 @@ launchButton.addEventListener('click', async () => {
   setBusy(true, 'Applying GPU preference and launching your game…');
   try {
     const result = await invoke('launch_game', { gameDir: state.folder, executable: state.executable, gpu: state.selectedGpu });
-    showMessage(result, 'success');
+    showMessage(result.message, 'success');
+    invoke('start_monitoring', { processId: result.processId }).then(async (message) => {
+      $('#monitor-message').textContent = message;
+      await refreshMonitor();
+      if (state.monitorPreferences.overlayAfterLaunch && state.monitorSnapshot?.gameRunning) {
+        await invoke('set_overlay_visible', { visible: true });
+        state.overlayVisible = true;
+        await refreshMonitor();
+      }
+    }).catch((error) => {
+      $('#monitor-message').textContent = `Game launched, but monitoring could not start: ${error}`;
+    });
   } catch (error) {
     showMessage(String(error), 'error');
   } finally {
@@ -323,8 +500,13 @@ uninstallButton.addEventListener('click', async () => {
 });
 
 setTheme(state.theme);
+setView('setup');
+saveMonitorPreferences();
 updateButtons();
 if (state.folder) inspectFolder(state.folder);
 loadGpus();
 checkRuntime();
 refreshRelease();
+refreshMonitor();
+window.setInterval(refreshMonitor, 900);
+}
