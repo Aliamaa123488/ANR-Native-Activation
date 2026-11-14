@@ -14,10 +14,10 @@
     "windows": [
       {
         "title": "ANR Native Activation",
-        "width": 880,
-        "height": 700,
-        "minWidth": 700,
-        "minHeight": 620,
+        "width": 840,
+        "height": 660,
+        "minWidth": 680,
+        "minHeight": 560,
         "center": true,
         "resizable": true,
         "backgroundColor": "#0c1017"

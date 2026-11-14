@@ -289,3 +289,30 @@ footer { margin-top: 8px; padding-top: 7px; font-size: 8px; }
   .monitor-section-title > span { display: none; }
   .monitor-legend small { display: none; }
 }
+
+@media (min-width: 741px) {
+  body { min-width: 660px; }
+  .shell { max-width: 940px; padding-inline: 28px; }
+  main { max-width: 760px; }
+  .topbar { height: 50px; }
+  .hero { min-height: 108px; padding: 12px 10px 10px; }
+  h1 { font-size: 30px; }
+  .release-strip { min-height: 46px; padding-block: 6px; }
+  .section-heading { margin-top: 11px; margin-bottom: 6px; }
+  .setup-card, .gpu-card { padding: 9px 11px; }
+  .path-row { min-height: 36px; }
+  .select-control { padding-block: 7px; }
+  .gpu-heading { margin-top: 9px; }
+  .compat-row { margin-top: 7px; padding-block: 7px; }
+  .actions-row { margin-top: 8px; }
+  .install-button, .launch-button, .uninstall-button { height: 35px; }
+  footer { margin-top: 6px; padding-top: 6px; }
+  #monitor-view { padding-top: 16px; }
+  .monitor-page-heading { margin-bottom: 11px; }
+  .monitor-page-heading h2 { font-size: 22px; }
+  .monitor-summary { gap: 6px; }
+  .monitor-stat { min-height: 64px; padding: 8px 10px; }
+  .monitor-stat > strong { font-size: 19px; }
+  .monitor-settings { margin-top: 10px; padding: 11px; }
+  .metric-option { min-height: 37px; padding-block: 5px; }
+}
